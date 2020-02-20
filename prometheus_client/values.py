@@ -48,13 +48,14 @@ def MultiProcessValue(process_identifier=os.getpid):
         """A float protected by a mutex backed by a per-process mmaped file."""
 
         _multiprocess = True
+        global_metric_values = values
 
         def __init__(self, typ, metric_name, name, labelnames, labelvalues, multiprocess_mode='', **kwargs):
             self._params = typ, metric_name, name, labelnames, labelvalues, multiprocess_mode
             with lock:
                 self.__check_for_pid_change()
                 self.__reset()
-                values.append(self)
+                self.global_metric_values.append(self)
 
         def __reset(self):
             typ, metric_name, name, labelnames, labelvalues, multiprocess_mode = self._params
@@ -80,7 +81,7 @@ def MultiProcessValue(process_identifier=os.getpid):
                 for f in files.values():
                     f.close()
                 files.clear()
-                for value in values:
+                for value in self.global_metric_values:
                     value.__reset()
 
         def inc(self, amount):
@@ -115,3 +116,7 @@ def get_value_class():
 
 
 ValueClass = get_value_class()
+
+
+def clear_child_metrics_after_fork():
+    del ValueClass.global_metric_values[:]
